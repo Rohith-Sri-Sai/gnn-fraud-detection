@@ -1,0 +1,7 @@
+[core]
+    remote = dagshub_remote
+['remote "dagshub_remote"']
+    url = https://dagshub.com/rohithsrisai11/gnn-fraud-detection.dvc
+    auth = basic
+    user = rohithsrisai11
+    password = 87e8b3fece75fbb25f590e252e127c80ea72e3a6
