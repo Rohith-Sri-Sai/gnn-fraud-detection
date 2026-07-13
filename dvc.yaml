@@ -1,6 +1,6 @@
 stages:
   preprocess:
-    cmd: python src/data_engine.py
+    cmd: python -m src.data_engine
     deps:
     - src/data_engine.py
     - data/raw/train_transaction.csv
@@ -12,7 +12,7 @@ stages:
     - data/processed/graph.pt 
   
   train:
-    cmd: python src/trainer.py
+    cmd: python -m src.trainer
     deps:
     - src/trainer.py
     - src/model.py

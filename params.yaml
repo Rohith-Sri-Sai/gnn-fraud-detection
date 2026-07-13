@@ -3,6 +3,8 @@ preprocess:
   id_path: data/raw/train_identity.csv
 
 train:
-  hidden_channel: 128
+  hidden_channel: 256
   batch_size: 1024
   epochs: 20
+  learning_rate: 0.005
+  dropout: 0.30

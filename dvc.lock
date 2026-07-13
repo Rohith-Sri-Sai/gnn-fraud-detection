@@ -1,0 +1,55 @@
+schema: '2.0'
+stages:
+  preprocess:
+    cmd: python -m src.data_engine
+    deps:
+    - path: data/raw/train_identity.csv
+      hash: md5
+      md5: 8487db5001c8bad139f3318d5d3db416
+      size: 26529680
+    - path: data/raw/train_transaction.csv
+      hash: md5
+      md5: 58b4038d8715f5e11007b826bef00ce7
+      size: 683351067
+    - path: src/data_engine.py
+      hash: md5
+      md5: dc4d89d053686f0193fc050f3ca320af
+      size: 6616
+    params:
+      params.yaml:
+        preprocess.id_path: data/raw/train_identity.csv
+        preprocess.tx_path: data/raw/train_transaction.csv
+    outs:
+    - path: data/processed/graph.pt
+      hash: md5
+      md5: e52eaba41abd6614cabf0c7980a68103
+      size: 79889122
+  train:
+    cmd: python -m src.trainer
+    deps:
+    - path: data/processed/graph.pt
+      hash: md5
+      md5: e52eaba41abd6614cabf0c7980a68103
+      size: 79889122
+    - path: src/model.py
+      hash: md5
+      md5: bcb821ea3a7487e59aab9c104769a3ba
+      size: 2536
+    - path: src/trainer.py
+      hash: md5
+      md5: c6853ddc1148dbf444ae225315947914
+      size: 7189
+    params:
+      params.yaml:
+        train.batch_size: 1024
+        train.epochs: 20
+        train.hidden_channel: 256
+    outs:
+    - path: metrics.json
+      hash: md5
+      md5: 29867a3712903d97148a203b0216807f
+      size: 84
+    - path: models/graph_sage_model.pt
+      hash: md5
+      md5: 24ca52c800619aca3a48d26fa61a027d
+      size: 1110350
