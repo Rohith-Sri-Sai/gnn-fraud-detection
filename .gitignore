@@ -1,5 +1,19 @@
 venv
-_pycache_
+_pycache_/
 .idea
 data
-.vscode
+.vscode/
+.env
+models
+artifacts
+postgres_data/
+
+metrics.json
+reports/
+outputs/
+# DVC cache
+.dvc/cache/
+
+# DVC temporary files
+.dvc/tmp/
+

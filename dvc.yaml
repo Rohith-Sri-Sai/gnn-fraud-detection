@@ -1,0 +1,28 @@
+stages:
+  preprocess:
+    cmd: python src/data_engine.py
+    deps:
+    - src/data_engine.py
+    - data/raw/train_transaction.csv
+    - data/raw/train_identity.csv
+    params:
+    - preprocess.tx_path
+    - preprocess.id_path
+    outs:
+    - data/processed/graph.pt 
+  
+  train:
+    cmd: python src/trainer.py
+    deps:
+    - src/trainer.py
+    - src/model.py
+    - data/processed/graph.pt
+    params:
+    - train.hidden_channel
+    - train.batch_size
+    - train.epochs
+    outs:
+    - models/graph_sage_model.pt
+    metrics:
+    - metrics.json:
+        cache: false

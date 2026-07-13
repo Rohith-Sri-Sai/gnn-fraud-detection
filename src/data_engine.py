@@ -4,6 +4,8 @@ import torch
 import torch_geometric.transforms as T
 from torch_geometric.data import HeteroData
 from sklearn.preprocessing import StandardScaler, LabelEncoder
+import os
+from src.utils import load_params
 
 class DataEngine:
     def __init__(self,tx_path,id_path):
@@ -157,7 +159,14 @@ class DataEngine:
 
 
 if __name__ == "__main__":
-    engine=DataEngine("data/train_transaction.csv","data/train_identity.csv")
-    g=engine.run()
+    params = load_params()["preprocess"]
+    
+    engine = DataEngine(tx_path=params["tx_path"], id_path=params["id_path"])
+    g = engine.run()
+
+    # Save the PyTorch Geometric HeteroData object to disk
+    os.makedirs("data/processed", exist_ok=True)
+    torch.save(g, "data/processed/graph.pt")
+    print("Saved processed graph to data/processed/graph.pt")
 
 

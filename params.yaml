@@ -1,0 +1,8 @@
+preprocess:
+  tx_path: data/raw/train_transaction.csv
+  id_path: data/raw/train_identity.csv
+
+train:
+  hidden_channel: 128
+  batch_size: 1024
+  epochs: 20

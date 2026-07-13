@@ -4,6 +4,12 @@ from torch_geometric.loader import NeighborLoader
 from sklearn.metrics import roc_auc_score, average_precision_score
 import numpy as np
 from src.model import GraphModel
+import os
+import json
+from src.utils import load_params
+import mlflow
+import mlflow.pytorch
+import subprocess
 
 class GraphTrainer:
     def __init__(self,data, hidden_channel=128,batch_size=1024, epochs=20):
@@ -111,16 +117,86 @@ class GraphTrainer:
 
     def run(self):
         print("\n Starting Training Loop...")
+
         for epoch in range(1, self.epochs + 1):
             loss = self.train_epoch()
             val_roc, val_pr = self.evaluate(self.val_loader)
-            
-            print(f"Epoch {epoch:02d} | Train Loss: {loss:.4f} | Val ROC-AUC: {val_roc:.4f} | Val PR-AUC: {val_pr:.4f}")
-        
-        print("\n" + "="*50)
+
+            mlflow.log_metric(
+                "train_loss",
+                loss,
+                step=epoch
+            )
+
+            mlflow.log_metric(
+                "val_roc_auc",
+                val_roc,
+                step=epoch
+            )
+
+            mlflow.log_metric(
+                "val_pr_auc",
+                val_pr,
+                step=epoch
+            )
+
+            print(
+                f"Epoch {epoch:02d} | "
+                f"Train Loss: {loss:.4f} | "
+                f"Val ROC-AUC: {val_roc:.4f} | "
+                f"Val PR-AUC: {val_pr:.4f}"
+            )
+
+        print("\n" + "=" * 50)
         print(" FINAL PRODUCTION TEST EVALUATION ")
-        print("="*50)
+        print("=" * 50)
+
         test_roc, test_pr = self.evaluate(self.test_loader)
+
         print(f"Final Test ROC-AUC: {test_roc:.4f}")
         print(f"Final Test PR-AUC:  {test_pr:.4f}")
 
+        return test_roc, test_pr
+
+if __name__ == "__main__":
+    params = load_params()["train"]
+    mlflow.set_tracking_uri("http://localhost:5000")
+    mlflow.set_experiment("Fraud Detection GNN")
+    
+    # 1. Load the processed graph
+    data = torch.load("data/processed/graph.pt")
+    
+    # 2. Initialize and run trainer
+    with mlflow.start_run():
+
+        trainer = GraphTrainer(
+            data=data,
+            hidden_channel=params["hidden_channel"],
+            batch_size=params["batch_size"],
+            epochs=params["epochs"]
+        )
+        mlflow.log_params(params)
+
+        test_roc, test_pr = trainer.run()
+
+        # 3. Save model weights
+        os.makedirs("models", exist_ok=True)
+        torch.save(trainer.model.state_dict(), "models/graph_sage_model.pt")
+        mlflow.pytorch.log_model(
+            trainer.model,
+            artifact_path="model"
+        )
+        
+        # 4. Evaluate and save metrics
+        mlflow.log_metric("test_roc_auc", test_roc)
+        mlflow.log_metric("test_pr_auc", test_pr)
+        metrics = {
+            "test_roc_auc": float(test_roc),
+            "test_pr_auc": float(test_pr)
+        }
+        
+        with open("metrics.json", "w") as f:
+            json.dump(metrics, f, indent=4)
+        mlflow.log_artifact("metrics.json")
+        mlflow.log_artifact("params.yaml")
+    print("Saved model weights and metrics.json")
