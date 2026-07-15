@@ -27,7 +27,7 @@ class GraphTrainer:
             metadata=data.metadata()
         ).to(self.device)
 
-        self.optimizer=torch.optim.Adam(self.model.parameters(),lr=0.005)
+        self.optimizer=torch.optim.Adam(self.model.parameters(),lr=0.001)
 
         # 2. Handle the 97% / 3% Class Imbalance
         # We can add weights to loss
@@ -48,8 +48,8 @@ class GraphTrainer:
         """
         return NeighborLoader(
             self.data,
-            # Sample 15 neighbors for Layer 1, and 10 neighbors for Layer 2
-            num_neighbors=[15, 10], 
+            # Sample 25 neighbors for Layer 1, and 15 neighbors for Layer 2
+            num_neighbors=[25, 15], 
             batch_size=self.batch_size,
             # Only start sampling from transactions that belong to this specific mask
             input_nodes=('transaction', self.data['transaction'][mask_name]),
@@ -68,9 +68,8 @@ class GraphTrainer:
             # Forward Pass: Get predictions for the batch
             out = self.model(batch.x_dict, batch.edge_index_dict)
             
-            # CRITICAL FAANG CONCEPT: Slicing the Batch
-            # The loader pulls in our target transactions PLUS all their neighbors.
-            # We only want to calculate the loss on the actual target transactions!
+            # The loader pulls in our target transactions PLUS all their neighbors
+            # We only want to calculate the loss on the actual target transactions
             batch_size = batch['transaction'].batch_size
             
             pred = out[:batch_size]

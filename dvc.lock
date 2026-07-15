@@ -37,19 +37,19 @@ stages:
       size: 2536
     - path: src/trainer.py
       hash: md5
-      md5: c6853ddc1148dbf444ae225315947914
-      size: 7189
+      md5: 1c60205e0cd10f1df904329cc4c9d4b1
+      size: 7130
     params:
       params.yaml:
-        train.batch_size: 1024
-        train.epochs: 20
-        train.hidden_channel: 256
+        train.batch_size: 512
+        train.epochs: 30
+        train.hidden_channel: 128
     outs:
     - path: metrics.json
       hash: md5
-      md5: 29867a3712903d97148a203b0216807f
+      md5: 03e1d21a66b8126bd067f9dc63c4321c
       size: 84
     - path: models/graph_sage_model.pt
       hash: md5
-      md5: 24ca52c800619aca3a48d26fa61a027d
-      size: 1110350
+      md5: cf94dfa6f7ba0300da35e8a7271fc7d2
+      size: 296206
