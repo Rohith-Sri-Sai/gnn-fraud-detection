@@ -3,6 +3,7 @@ import torch.nn.functional as F
 from torch_geometric.loader import NeighborLoader
 from sklearn.metrics import roc_auc_score, average_precision_score
 import numpy as np
+import copy
 from src.model import GraphModel
 import os
 import json
@@ -12,10 +13,13 @@ import mlflow.pytorch
 import subprocess
 
 class GraphTrainer:
-    def __init__(self,data, hidden_channel=128,batch_size=1024, epochs=20):
+    def __init__(self,data, hidden_channel=128,batch_size=1024, epochs=20,seed=42):
         self.data=data
         self.epochs=epochs
         self.batch_size=batch_size
+
+        torch.manual_seed(seed)
+        np.random.seed(seed)
 
         self.device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         print(f"Training on device: {self.device}")
@@ -30,15 +34,24 @@ class GraphTrainer:
         self.optimizer=torch.optim.Adam(self.model.parameters(),lr=0.001)
 
         # 2. Handle the 97% / 3% Class Imbalance
-        # We can add weights to loss
-        # Misclassifying a fraud(class1), the penalty is 10 times more than misclassifying a legit(class0)
-        weights=torch.tensor([1.0,10.0],dtype=torch.float32).to(self.device)
+        # computed from the actual training labels rather than hardcoded, so it always reflects the real ratio.
+        train_labels = data['transaction'].y[data['transaction'].train_mask]
+        num_pos = int((train_labels == 1).sum())
+        num_neg = int((train_labels == 0).sum())
+        pos_weight = num_neg / max(num_pos, 1)
+        print(f"Class balance -> neg: {num_neg}, pos: {num_pos}, computed pos_weight: {pos_weight:.2f}")
+
+        weights=torch.tensor([1.0, pos_weight],dtype=torch.float32).to(self.device)
         self.loss_fn=torch.nn.CrossEntropyLoss(weight=weights)
 
         # 3. Create the Mini-Batch Loaders
         self.train_loader = self._create_loader('train_mask', shuffle=True)
         self.val_loader = self._create_loader('val_mask', shuffle=False)
         self.test_loader = self._create_loader('test_mask',shuffle=False)
+
+        self.best_val_pr = -1.0
+        self.best_state_dict = None
+        self.best_epoch = -1
 
     def _create_loader(self, mask_name, shuffle):
         """
@@ -139,12 +152,27 @@ class GraphTrainer:
                 step=epoch
             )
 
+            is_best = val_pr > self.best_val_pr
+            if is_best:
+                self.best_val_pr = val_pr
+                self.best_epoch = epoch
+                self.best_state_dict = copy.deepcopy(self.model.state_dict())
+
             print(
                 f"Epoch {epoch:02d} | "
                 f"Train Loss: {loss:.4f} | "
                 f"Val ROC-AUC: {val_roc:.4f} | "
                 f"Val PR-AUC: {val_pr:.4f}"
+                f"{'  <- best so far' if is_best else ''}"
             )
+
+        # Restore the best checkpoint (by val PR-AUC) before final test eval,
+        # instead of silently using whatever the last epoch happened to be.
+        print(f"\nRestoring best checkpoint from epoch {self.best_epoch} "
+              f"(val PR-AUC: {self.best_val_pr:.4f})")
+        self.model.load_state_dict(self.best_state_dict)
+        mlflow.log_param("best_epoch", self.best_epoch)
+        mlflow.log_metric("best_val_pr_auc", self.best_val_pr)
 
         print("\n" + "=" * 50)
         print(" FINAL PRODUCTION TEST EVALUATION ")
@@ -163,7 +191,7 @@ if __name__ == "__main__":
     mlflow.set_experiment("Fraud Detection GNN")
     
     # 1. Load the processed graph
-    data = torch.load("data/processed/graph.pt")
+    data = torch.load("data/processed/graph.pt",weights_only=False)
     
     # 2. Initialize and run trainer
     with mlflow.start_run():

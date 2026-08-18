@@ -28,19 +28,22 @@ class DataEngine:
         print("\n2. Engineering Features...")
         self._engineer_features()
 
-        print("\n3. Preprocesing...")
+        print("\n3. Computing Temporal Split Masks...")
+        self._compute_temporal_masks()
+
+        print("\n4. Preprocesing...")
         self._preprocessing()
 
-        print("\n4. Building Graph Topology...")
+        print("\n5. Building Graph Topology...")
         self._build_graph_topology()
 
-        print("\n5. Splitting Data (Strict Temporal)...")
+        print("\n6. Splitting Data (Strict Temporal)...")
         self._temporal_split()
 
-        print("\n6. Scaling Features (Train-Only)...")
+        print("\n7. Scaling Features (Train-Only)...")
         self._scale_features()
 
-        print("\n7. Finalizing Feature Tensor...")
+        print("\n8. Finalizing Feature Tensor...")
         self._build_transaction_features()
 
         print(f"\n Graph Ready! Nodes: {self.data.num_nodes}, Edges: {self.data.num_edges}")
@@ -62,6 +65,25 @@ class DataEngine:
         self.df["time_delta"] = self.df["time_delta"].fillna(0).clip(lower=0)
         self.df["log_time_delta"] = np.log1p(self.df["time_delta"])
 
+    def _compute_temporal_masks(self):
+        self.df = self.df.sort_values("TransactionDT").reset_index(drop=True)
+
+        n = len(self.df)
+        train_end = int(0.7 * n)
+        val_end = int(0.85 * n)
+
+        train_idx = np.zeros(n, dtype=bool)
+        val_idx = np.zeros(n, dtype=bool)
+        test_idx = np.zeros(n, dtype=bool)
+
+        train_idx[:train_end] = True
+        val_idx[train_end:val_end] = True
+        test_idx[val_end:] = True
+
+        self.train_idx = train_idx
+        self.val_idx = val_idx
+        self.test_idx = test_idx
+
     def _preprocessing(self):
         self.num_cols=[c for c in self.num_cols if c in self.df.columns]
         self.cat_cols=[c for c in self.cat_cols if c in self.df.columns]
@@ -75,7 +97,6 @@ class DataEngine:
 
     def _build_graph_topology(self):
         # Re-sort chronologically for the Train/Test split later
-        self.df=self.df.sort_values("TransactionDT").reset_index(drop=True)
 
         # Setup Transaction Nodes
         self.data["transaction"].y=torch.tensor(self.df["isFraud"].values, dtype=torch.long)
@@ -94,22 +115,10 @@ class DataEngine:
         self.data = T.ToUndirected()(self.data)
     
     def _temporal_split(self):
-        # 70% Train, 15% Validation, 15% Test
-        n =len(self.df)
-        train_end=int(0.7*n)
-        val_end=int(0.85*n)
-
-        train_mask=torch.zeros(n,dtype=torch.bool)
-        val_mask= torch.zeros(n,dtype=torch.bool)
-        test_mask=torch.zeros(n,dtype=torch.bool)
-
-        train_mask[:train_end]=True
-        val_mask[train_end:val_end]=True
-        test_mask[val_end:]=True
-
-        self.data["transaction"].train_mask= train_mask
-        self.data["transaction"].val_mask=val_mask
-        self.data["transaction"].test_mask=test_mask
+        # in _compute_temporal_masks(). Just convert to tensors and attach them to the graph now that transaction nodes exist.
+        self.data["transaction"].train_mask = torch.tensor(self.train_idx, dtype=torch.bool)
+        self.data["transaction"].val_mask = torch.tensor(self.val_idx, dtype=torch.bool)
+        self.data["transaction"].test_mask = torch.tensor(self.test_idx, dtype=torch.bool)
 
     def _scale_features(self):
         # Get indices for training data

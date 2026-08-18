@@ -13,8 +13,8 @@ stages:
       size: 683351067
     - path: src/data_engine.py
       hash: md5
-      md5: dc4d89d053686f0193fc050f3ca320af
-      size: 6616
+      md5: 1e8014313793feed52e8a902e9ad5faa
+      size: 7047
     params:
       params.yaml:
         preprocess.id_path: data/raw/train_identity.csv
@@ -37,8 +37,8 @@ stages:
       size: 2536
     - path: src/trainer.py
       hash: md5
-      md5: 1c60205e0cd10f1df904329cc4c9d4b1
-      size: 7130
+      md5: e91b2f0cc5f99dd3a23d94688ba09c33
+      size: 8413
     params:
       params.yaml:
         train.batch_size: 512
@@ -47,9 +47,9 @@ stages:
     outs:
     - path: metrics.json
       hash: md5
-      md5: 03e1d21a66b8126bd067f9dc63c4321c
+      md5: 30e92d901cd4ffa93a82ea260c0c755a
       size: 84
     - path: models/graph_sage_model.pt
       hash: md5
-      md5: cf94dfa6f7ba0300da35e8a7271fc7d2
+      md5: 5eae53309a28db5ca8dcaf7351c2da91
       size: 296206
