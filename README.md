@@ -60,17 +60,17 @@ against 1.5% for a normal account.
 
 ## Setup
 
-### 1. Python environment (Python 3.11, CUDA 12.8)
+### 1. Python environment (Python 3.11, CUDA 12.8, pip)
 
 PyTorch is built for CUDA 12.8, which Blackwell GPUs (sm_120) require. It also works on older NVIDIA GPUs.
 
 ```bash
-uv venv --python 3.11 venv
-uv pip install --python venv/bin/python -r requirements.txt \
-  --extra-index-url https://download.pytorch.org/whl/cu128 \
-  -f https://data.pyg.org/whl/torch-2.7.0+cu128.html \
-  --index-strategy unsafe-best-match
+python3.11 -m venv venv
 source venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt \
+  --extra-index-url https://download.pytorch.org/whl/cu128 \
+  -f https://data.pyg.org/whl/torch-2.7.0+cu128.html
 ```
 
 Check the GPU:
@@ -105,14 +105,17 @@ Download `tfinance.zip` from the authors' Google Drive, linked from
 <https://github.com/squareRoot3/Rethinking-Anomaly-Detection>, and unzip it into `data/raw/tfinance/`.
 
 The file is a DGL graph. Convert it once to plain tensors, so the project itself doesn't depend on DGL.
-Use a separate environment, because DGL doesn't support the project's torch version:
+Use a separate Python environment, because DGL doesn't support the project's torch version:
 
 ```bash
-uv venv --python 3.11 dglenv
-uv pip install --python dglenv/bin/python torch==2.4.0 --index-url https://download.pytorch.org/whl/cpu
-UV_SKIP_WHEEL_FILENAME_CHECK=1 uv pip install --python dglenv/bin/python "dgl==2.4.0" \
+python3.11 -m venv dglenv
+source dglenv/bin/activate
+python -m pip install --upgrade pip
+pip install torch==2.4.0 --index-url https://download.pytorch.org/whl/cpu
+pip install "dgl==2.4.0" \
   -f https://data.dgl.ai/wheels/torch-2.4/repo.html "numpy<2" pandas pyyaml pydantic packaging requests tqdm psutil
-dglenv/bin/python -m src.convert_tfinance data/raw/tfinance/tfinance data/raw/tfinance/tfinance.pt
+python -m src.convert_tfinance data/raw/tfinance/tfinance data/raw/tfinance/tfinance.pt
+deactivate
 ```
 
 ---
