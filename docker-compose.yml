@@ -12,11 +12,19 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
 
+    # Bound to localhost only: MLflow reaches Postgres over the compose network,
+    # so the DB does not need to be reachable from other machines on the shared server.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
 
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   mlflow:
 
@@ -26,23 +34,67 @@ services:
 
     container_name: mlflow-server
 
-    depends_on:
-      - postgres
+    restart: unless-stopped
 
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    # Localhost only (MLflow has no authentication). From another machine use an SSH tunnel:
+    #   ssh -L 5000:localhost:5000 -L 8000:localhost:8000 <user>@<server>
     ports:
-      - "5000:5000"
+      - "127.0.0.1:5000:5000"
 
     volumes:
       - ./artifacts:/artifacts
 
+    # --serve-artifacts proxies artifact uploads through the server, so training
+    # clients never need direct access to /artifacts (persisted in ./artifacts).
+    # --allowed-hosts: MLflow 3 rejects unknown Host headers; `mlflow` is the name the
+    # API container uses on the compose network.
     command:
       [
         "server",
         "--host=0.0.0.0",
         "--port=5000",
-        "--backend-store-uri=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}",
-        "--default-artifact-root=/artifacts"
+        "--backend-store-uri=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}",
+        "--serve-artifacts",
+        "--artifacts-destination=/artifacts",
+        "--allowed-hosts=localhost,localhost:5000,127.0.0.1,127.0.0.1:5000,mlflow,mlflow:5000"
       ]
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  api:
+
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+
+    container_name: fraud-api
+
+    restart: unless-stopped
+
+    depends_on:
+      mlflow:
+        condition: service_healthy
+
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MODEL_NAME: gnn-fraud-tfinance-graphsage
+      MODEL_ALIAS: champion
+      GRAPH_PATH: /data/graph.pt
+
+    # The processed graph produced by the DVC preprocess stage (read-only)
+    volumes:
+      - ./data/processed:/data:ro
+
+    ports:
+      - "127.0.0.1:8000:8000"
 
 volumes:
 

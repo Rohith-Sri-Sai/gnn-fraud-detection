@@ -4,10 +4,11 @@ _pycache_/
 data
 .vscode/
 .env
+.env.example
 models
 artifacts
 postgres_data/
-
+docs
 metrics.json
 reports/
 outputs/

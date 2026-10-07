@@ -3,53 +3,66 @@ stages:
   preprocess:
     cmd: python -m src.data_engine
     deps:
-    - path: data/raw/train_identity.csv
+    - path: data/raw/tfinance/tfinance.pt
       hash: md5
-      md5: 8487db5001c8bad139f3318d5d3db416
-      size: 26529680
-    - path: data/raw/train_transaction.csv
-      hash: md5
-      md5: 58b4038d8715f5e11007b826bef00ce7
-      size: 683351067
+      md5: 048d52f81891c8a5b31ec2cdda995db5
+      size: 681327067
     - path: src/data_engine.py
       hash: md5
-      md5: 1e8014313793feed52e8a902e9ad5faa
-      size: 7047
+      md5: 9333fd4dd34c126f2fd77c6f67a27a34
+      size: 2842
     params:
       params.yaml:
-        preprocess.id_path: data/raw/train_identity.csv
-        preprocess.tx_path: data/raw/train_transaction.csv
+        preprocess:
+          data_path: data/raw/tfinance/tfinance.pt
+          train_ratio: 0.4
+          val_ratio: 0.2
+          split_seed: 0
     outs:
     - path: data/processed/graph.pt
       hash: md5
-      md5: e52eaba41abd6614cabf0c7980a68103
-      size: 79889122
+      md5: 8dd6dfe90a4178ce7be55de3346721d5
+      size: 681131773
   train:
     cmd: python -m src.trainer
     deps:
     - path: data/processed/graph.pt
       hash: md5
-      md5: e52eaba41abd6614cabf0c7980a68103
-      size: 79889122
+      md5: 8dd6dfe90a4178ce7be55de3346721d5
+      size: 681131773
     - path: src/model.py
       hash: md5
-      md5: bcb821ea3a7487e59aab9c104769a3ba
-      size: 2536
+      md5: 14eb4bf304eb327ae0371f51d3cfdc63
+      size: 3700
     - path: src/trainer.py
       hash: md5
-      md5: e91b2f0cc5f99dd3a23d94688ba09c33
-      size: 8413
+      md5: 0a95d13b9086b04261bb4cd2074b365f
+      size: 12120
     params:
       params.yaml:
-        train.batch_size: 512
-        train.epochs: 30
-        train.hidden_channel: 128
+        train:
+          label_trick: true
+          label_rate: 0.5
+          hidden_channel: 128
+          epochs: 500
+          lr: 0.003
+          weight_decay: 0.0001
+          num_layers: 2
+          dropout: 0.3
+          residual: true
+          norm: true
+          aggr: mean
+          pos_weight_power: 0.0
+          scheduler: none
+          seed: 42
+          log_every: 10
+          ensemble_size: 5
     outs:
     - path: metrics.json
       hash: md5
-      md5: 30e92d901cd4ffa93a82ea260c0c755a
-      size: 84
+      md5: b47187c355c09ea7da21241ec7f55cf5
+      size: 80
     - path: models/graph_sage_model.pt
       hash: md5
-      md5: 5eae53309a28db5ca8dcaf7351c2da91
-      size: 296206
+      md5: bb0604074a87c4e0738d38ddfb3bce1f
+      size: 1395773

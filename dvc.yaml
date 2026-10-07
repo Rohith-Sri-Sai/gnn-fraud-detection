@@ -3,26 +3,37 @@ stages:
     cmd: python -m src.data_engine
     deps:
     - src/data_engine.py
-    - data/raw/train_transaction.csv
-    - data/raw/train_identity.csv
+    - data/raw/tfinance/tfinance.pt
     params:
-    - preprocess.tx_path
-    - preprocess.id_path
+    - preprocess
     outs:
-    - data/processed/graph.pt 
-  
+    - data/processed/graph.pt
+
   train:
     cmd: python -m src.trainer
     deps:
     - src/trainer.py
     - src/model.py
+    - src/features.py
     - data/processed/graph.pt
     params:
-    - train.hidden_channel
-    - train.batch_size
-    - train.epochs
+    - train
+    - alerts
     outs:
     - models/graph_sage_model.pt
+    - outputs/registered_model.json:
+        cache: false
     metrics:
     - metrics.json:
+        cache: false
+
+  promote:
+    cmd: python -m src.promote
+    deps:
+    - src/promote.py
+    - outputs/registered_model.json
+    params:
+    - promote
+    outs:
+    - outputs/promotion.json:
         cache: false

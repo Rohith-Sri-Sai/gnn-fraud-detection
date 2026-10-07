@@ -1,12 +1,17 @@
 # --- Core Deep Learning Stack ---
-# Note: Ensure these match your CUDA version (e.g., cu118, cu121)
-torch==2.1.0
-torchvision==0.16.0
-torchaudio==2.1.0
+# CUDA 12.8 builds are required for Blackwell GPUs (sm_120), e.g. the RTX PRO 6000.
+# Install with:
+#   pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cu128 -f https://data.pyg.org/whl/torch-2.7.0+cu128.html
+# or with uv (needs --index-strategy, because the PyTorch index also hosts an old tqdm):
+#   uv pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cu128 -f https://data.pyg.org/whl/torch-2.7.0+cu128.html --index-strategy unsafe-best-match
+torch==2.7.1
+torchvision==0.22.1
+torchaudio==2.7.1
 
 # --- Graph Neural Network Stack (PyG) ---
-# FAANG Tip: These often require specific wheels from pyg.org
-torch-geometric==2.4.0
+# Compiled extensions come from the pyg.org wheel index (-f flag above)
+torch-geometric==2.6.1
+pyg-lib
 torch-scatter
 torch-sparse
 torch-cluster
@@ -19,5 +24,6 @@ scikit-learn==1.3.1
 tqdm==4.66.1
 
 dvc
-mlflow
+# Keep in sync with docker/Dockerfile.mlflow (client and server versions should match)
+mlflow==3.16.1
 pyyaml

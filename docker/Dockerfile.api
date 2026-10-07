@@ -1,0 +1,17 @@
+# Fraud-scoring API (CPU). torch / torch-geometric / mlflow versions match training
+# (requirements.txt) so the pickled model from the registry loads unchanged.
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir torch==2.7.1 --index-url https://download.pytorch.org/whl/cpu && \
+    pip install --no-cache-dir torch-geometric==2.6.1 torch-scatter torch-sparse \
+        -f https://data.pyg.org/whl/torch-2.7.0+cpu.html && \
+    pip install --no-cache-dir mlflow==3.16.1 numpy==1.26.0 scikit-learn==1.3.1 pyyaml \
+        fastapi "uvicorn[standard]"
+
+COPY src/ src/
+
+EXPOSE 8000
+
+CMD ["uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000"]
